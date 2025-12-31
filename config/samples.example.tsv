@@ -1,0 +1,7 @@
+sample	tree	condition	r1	r2
+Tree1_Control	1	Control	data\raw\Tree1_Control_R1.fastq.gz	data\raw\Tree1_Control_R2.fastq.gz
+Tree1_Protzen	1	Protzen	data\raw\Tree1_Protzen_R1.fastq.gz	data\raw\Tree1_Protzen_R2.fastq.gz
+Tree5_Control	5	Control	data\raw\Tree5_Control_R1.fastq.gz	data\raw\Tree5_Control_R2.fastq.gz
+Tree5_Protzen	5	Protzen	data\raw\Tree5_Protzen_R1.fastq.gz	data\raw\Tree5_Protzen_R2.fastq.gz
+Tree10_Control	10	Control	data\raw\Tree10_Control_R1.fastq.gz	data\raw\Tree10_Control_R2.fastq.gz
+Tree10_Protzen	10	Protzen	data\raw\Tree10_Protzen_R1.fastq.gz	data\raw\Tree10_Protzen_R2.fastq.gz
