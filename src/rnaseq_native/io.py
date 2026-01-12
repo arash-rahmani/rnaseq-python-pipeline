@@ -3,6 +3,7 @@ import pandas as pd
 
 # Expected schema for the sample sheet (TSV file)
 REQUIRED_COLUMNS = ("sample", "tree", "condition", "r1", "r2")
+ALLOWED_CONDITIONS = ("Control", "Protzen")
 
 def load_samples_tsv(path: str | Path) -> pd.DataFrame:
     """ Load and validate a sample sheet TSV file for the RNA-seq pipeline.
@@ -46,5 +47,11 @@ def load_samples_tsv(path: str | Path) -> pd.DataFrame:
     if df["sample"].duplicated().any():
         dups = df.loc[df["sample"].duplicated(), "sample"].tolist()
         raise ValueError(f"Duplicate sample IDs found: {dups}")
+# Validation: Condition must be one of the allowed values
+    bad = sorted(set(df["condition"]) - set(ALLOWED_CONDITIONS))
+    if bad:
+        raise ValueError(
+            f"unknown condition(s) {bad}. Allowed: {ALLOWED_CONDITIONS}")
+
 
     return df
