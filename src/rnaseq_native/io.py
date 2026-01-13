@@ -1,11 +1,12 @@
 from pathlib import Path
 import pandas as pd
 
-# Expected schema for the sample sheet (TSV file)
+# Expected format for the sample sheet (TSV file)
 REQUIRED_COLUMNS = ("sample", "tree", "condition", "r1", "r2")
 ALLOWED_CONDITIONS = ("Control", "Protzen")
 
-def load_samples_tsv(path: str | Path) -> pd.DataFrame:
+
+def load_samples_tsv(path: str | Path, strict_path: bool = False) -> pd.DataFrame:
     """ Load and validate a sample sheet TSV file for the RNA-seq pipeline.
     the TSV must contain REQUIRED_COLUMNS:
     sample, tree, condition, r1, r2
@@ -52,6 +53,14 @@ def load_samples_tsv(path: str | Path) -> pd.DataFrame:
     if bad:
         raise ValueError(
             f"unknown condition(s) {bad}. Allowed: {ALLOWED_CONDITIONS}")
-
+# Optional validation: verify that FASTQ files exist
+    if strict_path:
+        missing_paths: list[str] = []
+        for col in ("r1", "r2"):
+            for p in df[col].tolist():
+                if p and not Path(p).exists():
+                    missing_paths.append(p)
+        if missing_paths:
+            raise FileNotFoundError(f"Missing FASTQ paths: {missing_paths}")
 
     return df

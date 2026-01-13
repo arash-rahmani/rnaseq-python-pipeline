@@ -64,3 +64,12 @@ def test_duplicate_samples_rejected(tmp_path: Path) -> None:
 
 def test_required_columns_is_correct() -> None:
     assert REQUIRED_COLUMNS == ("sample", "tree", "condition", "r1", "r2")
+
+
+def test_strict_paths_rejects_missing_fastqs(tmp_path: Path) -> None:
+    p = _write_tsv(
+        tmp_path / "missing_fastqs.tsv",
+        "sample\ttree\tcondition\tr1\tr2\nA\t1\tControl\tmissing_r1.fastq\tmissing_r2.fastq\n",
+    )
+    with pytest.raises(FileNotFoundError):
+        load_samples_tsv(p, strict_path=True)
