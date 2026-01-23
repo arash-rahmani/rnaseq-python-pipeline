@@ -24,7 +24,7 @@ def main(argv: list[str]) -> int:
     print(f"Conditions: {sorted(df['condition'].unique().tolist())}")
     print(f"Trees: {sorted(df['tree'].unique().tolist())}")
     print("\nCounts per condition:")
-    print(df["condition"].value_counts().tolist())
+    print(df["condition"].value_counts().to_string())
 
     print("\nSamples:")
     for s in df["sample"].tolist():
