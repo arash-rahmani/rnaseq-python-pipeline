@@ -7,3 +7,7 @@ __pycache__/
 data/raw/
 results/
 config/samples.tsv
+*.egg-info/
+build/
+dist/
+.pytest_cache/

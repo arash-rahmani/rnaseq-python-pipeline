@@ -30,4 +30,21 @@ python -m venv .venv
 
 python -m pip install -r requirments.txt
 
+## Configuration 
+Main config file: `config/config.yaml`
+
+Key fields:
+- `samples.tsv`: path to the sample sheet TSV
+- `strict_path`: if true, validate FASTQ paths exist on disc
+- `qc`: QC settings (fastp output directory, threads, etc.)
+
+## Sanity check (sample sheet)
+Print a summary of your sample sheet (from TSV or from config)
+
+'''bash
+python scripts/print_samples.py config/samples.tsv
+python scripts/print_samples.py config/config.yaml
+#Optional: enforce FASTQ esistence check
+python scripts/print_samples.py config/config.yaml --strict
+
 

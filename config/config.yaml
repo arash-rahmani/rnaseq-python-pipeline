@@ -1,10 +1,10 @@
-samples_test.tsv: config/samples.tsv
+samples_tsv: samples.tsv
  
- # Toggle strict file existence ckeck(FASTQ  paths)
- strict_paths: false
+# Toggle strict file existence ckeck(FASTQ  paths)
+strict_paths: false
  
- qc:
-   outdir: results/qc
-   fastp:
-      enabled: true
-      threads: 4
+qc:
+  outdir: results/qc
+  fastp:
+    enabled: true
+    threads: 4
