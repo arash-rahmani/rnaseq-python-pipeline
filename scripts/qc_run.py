@@ -6,6 +6,7 @@ from pathlib import Path
 from rnaseq_native.config import load_config_yaml
 from rnaseq_native.io import load_samples_tsv
 from rnaseq_native.qc import FastpQCConfig, fastp_command
+from rnaseq_native.run import RunOptions, run_commands
 
 
 def main(argv: list[str]) -> int:
@@ -14,6 +15,8 @@ def main(argv: list[str]) -> int:
         return 2
 
     cfg_path = Path(argv[1])
+    do_run = "--run" in argv[2:]  # default is dry-run
+
     cfg = load_config_yaml(cfg_path)
 
     samples_tsv = cfg.get("samples_tsv")
@@ -30,18 +33,19 @@ def main(argv: list[str]) -> int:
     fastp_cfg = qc_cfg.get("fastp", {})
     threads = int(fastp_cfg.get("threads", 4))
 
-    print(f"QC outdir: {outdir}")
-    print(f"fastp threads: {threads}\n")
+    cmds: list[list[str]] = []
 
     for _, row in df.iterrows():
-        cmd = fastp_command(
-            sample=row["sample"],
-            r1=row["r1"],
-            r2=row["r2"],
-            outdir=outdir,
-            cfg=FastpQCConfig(threads=threads),
+        cmds.append(
+            fastp_command(
+                sample=row["sample"],
+                r1=row["r1"],
+                r2=row["r2"],
+                outdir=outdir,
+                cfg=FastpQCConfig(threads=threads),
+            )
         )
-        print(" ".join(cmd))
+    run_commands(cmds, RunOptions(dry_run=not do_run))
     return 0
 
 
