@@ -8,3 +8,6 @@ qc:
   fastp:
     enabled: true
     threads: 4
+pipeline:
+  start_from: counts # counts / fastq
+  

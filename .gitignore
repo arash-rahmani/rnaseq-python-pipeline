@@ -11,3 +11,4 @@ config/samples.tsv
 build/
 dist/
 .pytest_cache/
+notes/
