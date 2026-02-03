@@ -21,5 +21,8 @@ def load_count_matrix(path: str | Path) -> pd.DataFrame:
     suffix = path.suffix.lower()
     if suffix == ".csv":
         df = pd.read_csv(path, dtype=str)
+    else:
+        # Default to TSV for .tsv/.txt/anything else
+        df = pd.read_csv(path, sep="\t", dtype=str)
 
     return df
