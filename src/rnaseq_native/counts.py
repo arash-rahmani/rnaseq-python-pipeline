@@ -58,3 +58,24 @@ def validate_count_matrix(df: pd.DataFrame) -> None:
     if gene.duplicated().any():
         dups = gene.loc[gene.duplicated()].unique().tolist()
         raise ValueError(f"Duplicate Geneid values found: {dups}")
+
+    # Sample columns (everything except Geneid)
+    sample_cols = list(df.columns[1:])
+
+    # No missing values in sample columns
+    if df[sample_cols].isna().any().any():
+        raise ValueError(
+            "Count matrix contains missing values in sample columns.")
+
+    # Covert to numeric (will raise if non-numeric values found)
+    numeric = df[sample_cols].apply(pd.to_numeric, errors="raise")
+
+    # Must be integer-like (no decimals)
+    if (numeric % 1 != 0).any().any():
+        raise ValueError(
+            "Count matrix contains non-integer values in sample columns (counts must be integers)")
+
+    # Must be non-negative
+    if (numeric < 0).any().any():
+        raise ValueError(
+            "Count matrix contains negative values in sample columns (counts must be >=0)")

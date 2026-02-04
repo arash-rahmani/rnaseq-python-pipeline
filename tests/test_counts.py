@@ -38,3 +38,30 @@ def test_validate_rejects_duplicate_geneid() -> None:
     except ValueError as e:
         assert "duplicate" in str(e).lower()
         assert "g1" in str(e)
+
+
+def test_counts_rejects_negative() -> None:
+    df = pd.DataFrame({"Geneid": ["g1"], "S1": ["-1"]})
+    try:
+        validate_count_matrix(df)
+        assert False, "Expected ValueError"
+    except ValueError as e:
+        assert "negative" in str(e).lower()
+
+
+def test_counts_rejects_non_integer() -> None:
+    df = pd.DataFrame({"Geneid": ["g1"], "S1": ["1.5"]})
+    try:
+        validate_count_matrix(df)
+        assert False, "Expected ValueError"
+    except ValueError as e:
+        assert "non-integer" in str(e).lower()
+
+
+def test_counts_rejects_non_numeric() -> None:
+    df = pd.DataFrame({"Geneid": ["g1"], "S1": ["abc"]})
+    try:
+        validate_count_matrix(df)
+        assert False, "Expected ValueError"
+    except ValueError as e:
+        assert "parse string" in str(e).lower()
