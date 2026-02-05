@@ -3,7 +3,12 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from rnaseq_native.counts import load_count_matrix, validate_count_matrix
+from rnaseq_native.counts import (
+    load_count_matrix, 
+    validate_count_matrix, 
+    align_counts_and_samples,
+)
+
 
 
 def test_missing_count_matrix_raises(tmp_path: Path) -> None:
@@ -18,7 +23,7 @@ def test_validate_requires_geneid_first_column() -> None:
         validate_count_matrix(df)
         assert False, "Expected ValueError"
     except ValueError as e:
-        assert "First comlumn must be" in str(e)
+        assert "First column must be" in str(e)
 
 
 def test_validate_rejects_empty_geneid() -> None:
@@ -65,3 +70,37 @@ def test_counts_rejects_non_numeric() -> None:
         assert False, "Expected ValueError"
     except ValueError as e:
         assert "parse string" in str(e).lower()
+
+
+def test_counts_sample_mismatch_raises_clear_error() -> None:
+    counts = pd.DataFrame(
+        {"Geneid": ["g1"], "A": ["1"], "B": ["2"]}
+    )
+    meta = pd.DataFrame(
+        {"sample": ["A", "C"], "tree": ["1", "1"], "condition": ["Control", "Protzen"],
+         "r1": ["x", "y"], "r2": ["x", "y"]}
+    )
+    try:
+        align_counts_and_samples(counts, meta)
+        assert False, "Expected ValueError"
+    except ValueError as e:
+        msg = str(e)
+        assert "Missing in samples.tsv" in msg
+        assert "Extra in samples.tsv" in msg
+        assert "B" in msg  # missing
+        assert "C" in msg  # extra
+
+
+def test_align_reorders_metadata_to_match_counts() -> None:
+    counts = pd.DataFrame({"Geneid": ["g1"], "B": ["2"], "A": ["1"]})
+    meta = pd.DataFrame(
+        {
+            "sample": ["A", "B"],
+            "tree": ["1", "1"],
+            "condition": ["Control", "Protzen"],
+            "r1": ["x", "y"],
+            "r2": ["x", "y"]
+        }
+    )
+    _, meta2 = align_counts_and_samples(counts, meta)
+    assert meta2["sample"].tolist() == ["B", "A"]
