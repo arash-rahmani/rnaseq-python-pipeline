@@ -73,3 +73,13 @@ def test_strict_paths_rejects_missing_fastqs(tmp_path: Path) -> None:
     )
     with pytest.raises(FileNotFoundError):
         load_samples_tsv(p, strict_path=True)
+
+
+def test_minimal_samplesheet_allowed_in_counts_mode(tmp_path: Path) -> None:
+    p = _write_tsv(
+        tmp_path / "samples_min.tsv",
+        "sample\ttree\tcondition\nA\t1\tControl\nB\t1\tProtzen\n",
+    )
+    df = load_samples_tsv(p, require_fastq=False)
+    assert df.shape[0] == 2
+    assert df["sample"].tolist() == ["A", "B"]
