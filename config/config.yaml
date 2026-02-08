@@ -10,4 +10,9 @@ qc:
     threads: 4
 pipeline:
   start_from: counts # counts / fastq
+
+inputs:
+  counts: ../gene_count_matrix.csv
+  samples: samples.tsv
+    
   
