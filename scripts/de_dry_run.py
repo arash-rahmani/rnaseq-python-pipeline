@@ -9,12 +9,21 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+import json
+from datetime import datetime
+
 
 
 from rnaseq_native.paths import project_root
 from rnaseq_native.config import load_config_yaml
 from rnaseq_native.io import load_samples_tsv
-from rnaseq_native.counts import load_count_matrix
+from rnaseq_native.counts import load_count_matrix, align_counts_and_samples
+
+
+def write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
 
 
 
@@ -44,6 +53,39 @@ def main(argv: list[str]) -> int:
     # Load count matrix
     counts_df = load_count_matrix(counts_path)
 
+    counts_df, samples_df = align_counts_and_samples(counts_df, samples_df)
+    print("counts and samples aligned successfully.")
+    print(f"Aligned sample order: {samples_df['sample'].tolist()}")
+
+    out_path = project_root() / "results" / "analysis" / "de_plan.json"
+
+    plan = {
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "mode": "counts",
+        "inputs": {
+            "config": str(cfg_path),
+            "samples_tsv": str(samples_path),
+            "counts_csv": str(counts_path)
+        },
+        "dataset": {
+            "n_genes": int(counts_df.shape[0]),
+            "n_samples": int(len(samples_df)),
+            "sample_order": samples_df['sample'].tolist(),
+            "conditions": samples_df['condition'].tolist(),
+            "trees": samples_df['tree'].tolist(),
+        },
+        # First version: only condition as design factor
+        # We'll consider adding "tree" later if wedecide to model it.
+        "design": {
+            "factors": ["condition"],
+            "contrast": ["condition", "Protzen", "Control"]
+        },
+
+    }
+
+    write_json(out_path, plan)
+    print(f"Wrote DE plan to: {out_path}")
+
     print(f"counts loaded: {counts_df.shape}")
     print(f"counts columns (first 10): {list(counts_df.columns)[:10]}")
 
@@ -51,6 +93,8 @@ def main(argv: list[str]) -> int:
     print(f"pipeline.start_from: {start_from}")
     print(f"inputs.samples: {inputs.get('samples')}")
     print(f"inputs.counts: {inputs.get('counts')}")
+
+
 
     return 0
 
