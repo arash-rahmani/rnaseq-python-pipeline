@@ -4,7 +4,14 @@ import json
 import sys
 from pathlib import Path
 
+import pandas as pd
+from pydeseq2.dds import DeseqDataSet
+from pydeseq2.ds import DeseqStats
+
+
 from rnaseq_native.paths import project_root
+from rnaseq_native.io import load_samples_tsv
+from rnaseq_native.counts import load_count_matrix, align_counts_and_samples
 
 
 def main(argv: list[str]) -> int:
@@ -12,6 +19,59 @@ def main(argv: list[str]) -> int:
     ) / "results" / "analysis" / "de_plan.json"
 
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
+
+    counts_path = Path(plan["inputs"]["counts_csv"])
+    samples_path = Path(plan["inputs"]["samples_tsv"])
+
+    samples_df = load_samples_tsv(samples_path, require_fastq=False)
+    counts_df = load_count_matrix(counts_path)
+
+    counts_df, samples_df = align_counts_and_samples(counts_df, samples_df)
+
+    print("Loaded and aligned inputs for DE")
+
+    # Prepare PyDESeq2 inputs
+    counts_only = counts_df.set_index("Geneid").astype(int)
+    coldata = samples_df.set_index("sample")[["condition"]].copy()
+
+    print("coldata type:", type(coldata))
+    print("coldata shape:", coldata.shape)
+
+    print("Prepared PyDESeq2 inputs")
+    print(f"counts_only shape: {counts_only.shape}")
+    print(f"coldata shape: {coldata.shape}")
+
+    dds = DeseqDataSet(
+        counts=counts_only.T,
+        metadata=coldata,
+        design="~condition",
+    )
+
+    print("DeseqDataSet created")
+
+    print("Running DESeq2...")
+    dds.deseq2()
+    print("DESeq2 finished")
+
+    outdir = project_root() / "results" / "deseq2"
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    print("Computing DE statistics...")
+    stat_res = DeseqStats(dds, contrast=["condition", "Protzen", "Control"])
+    stat_res.summary()
+    res_df = stat_res.results_df
+    print("Stats finished")
+    print(res_df.head())
+
+    all_path = outdir / "deseq2_all_results.csv"
+    res_df.to_csv(all_path)
+    print(f"Wrote: {all_path}")
+
+    sig = res_df.dropna(subset=["padj"]).query("padj < 0.05").copy()
+    sig_path = outdir / "deseq2_significant_results.csv"
+    sig.to_csv(sig_path)
+    print(f"Wrote: {sig_path} (n={sig.shape[0]})")
+
 
     print(f"Loaded plan: {plan_path}")
     print(f"Mode: {plan['mode']}")
