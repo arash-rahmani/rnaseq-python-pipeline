@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from datetime import datetime
 
 import pandas as pd
 from pydeseq2.dds import DeseqDataSet
@@ -44,7 +45,7 @@ def main(argv: list[str]) -> int:
     dds = DeseqDataSet(
         counts=counts_only.T,
         metadata=coldata,
-        design="~condition",
+        design="~ condition",
     )
 
     print("DeseqDataSet created")
@@ -68,6 +69,25 @@ def main(argv: list[str]) -> int:
     n_padj_nan = int(res_df["padj"].isna().sum())
     n_p_lt_005 = int((res_df["pvalue"] < 0.05).sum(skipna=True))
     n_padj_lt_005 = int((res_df["padj"] < 0.05).sum(skipna=True))
+
+    summary_path = outdir / "deseq2_summary.json"
+
+    summary = {
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "plan_path": str(plan_path),
+        "inputs": plan["inputs"],
+        "design": plan["design"],
+        "dataset": plan["dataset"],
+        "summary": {
+            "genes_total": n_total,
+            "pvalue_nan": n_p_nan,
+            "padj_nan": n_padj_nan,
+            "pvalue_lt_005": n_p_lt_005,
+            "padj_lt_005": n_padj_lt_005,
+        },
+    }
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print(f"Wrote: {summary_path}")
 
     print("\nDE SUMMARY")
     print(f"genes total: {n_total}")
