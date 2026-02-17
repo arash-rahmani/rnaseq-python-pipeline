@@ -60,6 +60,33 @@ def main(argv: list[str]) -> int:
     stat_res = DeseqStats(dds, contrast=["condition", "Protzen", "Control"])
     stat_res.summary()
     res_df = stat_res.results_df
+
+    # ---- summary report(quick sanity + insigt) ----
+    n_total = int(res_df.shape[0])
+    n_p_nan = int(res_df["pvalue"].isna().sum())
+    n_padj_nan = int(res_df["padj"].isna().sum())
+    n_p_lt_005 = int((res_df["pvalue"] < 0.05).sum(skipna=True))
+    n_padj_lt_005 = int((res_df["padj"] < 0.05).sum(skipna=True))
+
+    print("\nDE SUMMARY")
+    print(f"genes total: {n_total}")
+    print(f"genes pvalue NaN: {n_p_nan}")
+    print(f"padj NaN: {n_padj_nan}")
+    print(f"pvalue < 0.05: {n_p_lt_005}")
+    print(f"padj < 0.05: {n_padj_lt_005}")
+
+    top_p = res_df.dropna(subset=["pvalue"]).sort_values("pvalue").head(10)
+    print("\nTop 10 genes by p-value:")
+    print(top_p[["log2FoldChange", "pvalue", "padj"]])
+
+    top_lfc = res_df.dropna(subset=["log2FoldChange"]).assign(
+        abs_lfc=lambda d: d["log2FoldChange"].abs()
+    ).sort_values("abs_lfc", ascending=False).head(10)
+
+    print("\nTop 10 genes by |log2FoldChange|:")
+    print(top_lfc[["log2FoldChange", "pvalue", "padj"]])
+
+
     print("Stats finished")
     print(res_df.head())
 
