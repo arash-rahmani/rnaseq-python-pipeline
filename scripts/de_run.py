@@ -57,7 +57,8 @@ def main(argv: list[str]) -> int:
     outdir.mkdir(parents=True, exist_ok=True)
 
     print("Computing DE statistics...")
-    stat_res = DeseqStats(dds, contrast=["condition", "Protzen", "Control"])
+    contrast = plan["design"]["contrast"] # e.g. ["condition", "Protzen", "Control"]
+    stat_res = DeseqStats(dds, contrast=contrast)
     stat_res.summary()
     res_df = stat_res.results_df
 
