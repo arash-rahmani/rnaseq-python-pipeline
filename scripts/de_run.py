@@ -100,12 +100,20 @@ def main(argv: list[str]) -> int:
     print("\nTop 10 genes by p-value:")
     print(top_p[["log2FoldChange", "pvalue", "padj"]])
 
+    top_p_path = outdir / "top_10_by_pvalue.csv"
+    top_p.to_csv(top_p_path)
+    print(f"Wrote {top_p_path}")
+
     top_lfc = res_df.dropna(subset=["log2FoldChange"]).assign(
         abs_lfc=lambda d: d["log2FoldChange"].abs()
     ).sort_values("abs_lfc", ascending=False).head(10)
 
     print("\nTop 10 genes by |log2FoldChange|:")
     print(top_lfc[["log2FoldChange", "pvalue", "padj"]])
+
+    top_lfc_path = outdir / "top_10_by_lfc.csv"
+    top_lfc.to_csv(top_lfc_path)
+    print(f"Wrote: {top_lfc_path}")
 
 
     print("Stats finished")
