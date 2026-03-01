@@ -29,12 +29,34 @@ def write_json(path: Path, payload: dict) -> None:
 
 def main(argv: list[str]) -> int:
     cfg_path = Path(argv[1]) if len(
-        argv) > 1 else project_root() / "config" / "config.yaml"
+        argv) > 1 else Path("config/config.yaml")
     cfg = load_config_yaml(cfg_path)
+
+    # repo root = parent of the config/ folder
+    repo_root = cfg_path.resolve().parents[1]
 
     # For now: just print we can read the config and print the two input paths.
     start_from = cfg.get("pipeline", {}).get("start_from", None)
     inputs = cfg.get("inputs", {})
+
+    analysis_cfg = cfg.get("analysis", {})
+    outdirs = cfg.get("outdir", {})
+
+    design = analysis_cfg.get("design", "~ tree + condition")
+    contrast = analysis_cfg.get(
+        "contrast", ["condition", "Protzen", "Control"])
+    alpha = float(analysis_cfg.get("alpha", 0.05))
+    min_total = int(analysis_cfg.get("min_total_count", 10))
+
+    analysis_dir = (repo_root / outdirs.get("analysis",
+                    "results/analysis")).resolve()
+    deseq2_dir = (repo_root / outdirs.get("deseq2",
+                  "results/deseq2")).resolve()
+    plots_dir = (repo_root / outdirs.get("plots",
+                 "results/plots")).resolve()
+
+
+
 
     # Resolve input paths relative to config file location
     samples_rel = inputs.get("samples")
@@ -57,7 +79,7 @@ def main(argv: list[str]) -> int:
     print("counts and samples aligned successfully.")
     print(f"Aligned sample order: {samples_df['sample'].tolist()}")
 
-    out_path = project_root() / "results" / "analysis" / "de_plan.json"
+    out_path = analysis_dir / "de_plan.json"
 
     plan = {
         "created_at": datetime.now().isoformat(timespec="seconds"),
@@ -77,8 +99,17 @@ def main(argv: list[str]) -> int:
         # First version: only condition as design factor
         # We'll consider adding "tree" later if wedecide to model it.
         "design": {
-            "factors": ["condition"],
-            "contrast": ["condition", "Protzen", "Control"]
+            "formula": design,
+            "contrast": contrast,
+            "alpha": alpha
+        },
+        "filters": {
+            "min_total_count": min_total
+        },
+        "outputs": {
+            "analysis_dir": str(analysis_dir),
+            "deseq2_dir": str(deseq2_dir),
+            "plots_dir": str(plots_dir),
         },
 
     }

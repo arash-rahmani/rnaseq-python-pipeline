@@ -1,18 +1,26 @@
-samples_tsv: samples.tsv
- 
-# Toggle strict file existence ckeck(FASTQ  paths)
-strict_paths: false
- 
+pipeline:
+  start_from: counts # counts / fastq
+
+inputs: 
+  counts: ../gene_count_matrix.csv
+  samples: samples.tsv
+
 qc:
   outdir: results/qc
   fastp:
     enabled: true
     threads: 4
-pipeline:
-  start_from: counts # counts / fastq
 
-inputs:
-  counts: ../gene_count_matrix.csv
-  samples: samples.tsv
+analysis: 
+  design: "~ tree + condition"
+  contrast: ["condition", "Protzen", "Control"]
+  alpha: 0.05
+  min_total_count: 10
+
+outdir:
+  analysis: results/analysis
+  deseq2: results/deseq2
+  plots: results/plots
+
     
   

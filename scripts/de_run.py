@@ -16,10 +16,24 @@ from rnaseq_native.counts import load_count_matrix, align_counts_and_samples
 
 
 def main(argv: list[str]) -> int:
-    plan_path = Path(argv[1]) if len(argv) > 1 else project_root(
-    ) / "results" / "analysis" / "de_plan.json"
+    plan_path = Path(argv[1]) if len(argv) > 1 else Path(
+        "results/analysis/de_plan.json")
 
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
+
+    # --- outputs from plan---
+    analysis_dir = Path(plan["outputs"]["analysis_dir"])
+    outdir = Path(plan["outputs"]["deseq2_dir"])
+    plots_dir = Path(plan["outputs"]["plots_dir"])
+    outdir.mkdir(parents=True, exist_ok=True)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+
+    # --- design + filters from plan ---
+    design = plan["design"]["formula"]
+    contrast = plan["design"]["contrast"]
+    alpha = float(plan["design"].get("alpha", 0.05))
+    min_total = int(plan.get("filters", {}).get("min_total_count", 10))
+
 
     counts_path = Path(plan["inputs"]["counts_csv"])
     samples_path = Path(plan["inputs"]["samples_tsv"])
@@ -33,10 +47,20 @@ def main(argv: list[str]) -> int:
 
     # Prepare PyDESeq2 inputs
     counts_only = counts_df.set_index("Geneid").astype(int)
-    coldata = samples_df.set_index("sample")[["condition"]].copy()
 
-    print("coldata type:", type(coldata))
-    print("coldata shape:", coldata.shape)
+    # Filter low-count genes before DE
+    keep = counts_only.sum(axis=1) >= min_total
+    counts_only = counts_only.loc[keep]
+
+    # Build metadata with tree + condition
+    coldata = samples_df.set_index("sample")[["tree", "condition"]].copy()
+
+    coldata["tree"] = pd.Categorical(coldata["tree"])
+    coldata["condition"] = pd.Categorical(
+        coldata["condition"], categories=["Control", "Protzen"])
+
+    print("Condition categories:", coldata["condition"].cat.categories)
+    print("Tree categories:", coldata["tree"].cat.categories)
 
     print("Prepared PyDESeq2 inputs")
     print(f"counts_only shape: {counts_only.shape}")
@@ -45,7 +69,7 @@ def main(argv: list[str]) -> int:
     dds = DeseqDataSet(
         counts=counts_only.T,
         metadata=coldata,
-        design="~ condition",
+        design=design,
     )
 
     print("DeseqDataSet created")
@@ -53,9 +77,6 @@ def main(argv: list[str]) -> int:
     print("Running DESeq2...")
     dds.deseq2()
     print("DESeq2 finished")
-
-    outdir = project_root() / "results" / "deseq2"
-    outdir.mkdir(parents=True, exist_ok=True)
 
     print("Computing DE statistics...")
     contrast = plan["design"]["contrast"] # e.g. ["condition", "Protzen", "Control"]
@@ -123,7 +144,7 @@ def main(argv: list[str]) -> int:
     res_df.to_csv(all_path)
     print(f"Wrote: {all_path}")
 
-    sig = res_df.dropna(subset=["padj"]).query("padj < 0.05").copy()
+    sig = res_df.dropna(subset=["padj"]).query("padj < @alpha").copy()
     sig_path = outdir / "deseq2_significant_results.csv"
     sig.to_csv(sig_path)
     print(f"Wrote: {sig_path} (n={sig.shape[0]})")
@@ -133,7 +154,7 @@ def main(argv: list[str]) -> int:
     print(f"Mode: {plan['mode']}")
     print(f"Counts: {plan['inputs']['counts_csv']}")
     print(f"Samples: {plan['inputs']['samples_tsv']}")
-    print(f"Design factors: {plan['design']['factors']}")
+    print(f"Design formula: {plan['design']['formula']}")
     print(f"Contrast: {plan['design']['contrast']}")
 
     return 0
