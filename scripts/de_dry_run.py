@@ -54,8 +54,8 @@ def main(argv: list[str]) -> int:
                   "results/deseq2")).resolve()
     plots_dir = (repo_root / outdirs.get("plots",
                  "results/plots")).resolve()
-
-
+    exports_dir = (repo_root / outdirs.get("exports",
+                   "results/exports")).resolve()
 
 
     # Resolve input paths relative to config file location
@@ -110,6 +110,7 @@ def main(argv: list[str]) -> int:
             "analysis_dir": str(analysis_dir),
             "deseq2_dir": str(deseq2_dir),
             "plots_dir": str(plots_dir),
+            "exports_dir": str(exports_dir),
         },
 
     }

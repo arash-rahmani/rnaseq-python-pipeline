@@ -21,6 +21,7 @@ outdir:
   analysis: results/analysis
   deseq2: results/deseq2
   plots: results/plots
+  exports: results/exports
 
     
   
