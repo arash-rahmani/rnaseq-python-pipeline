@@ -6,13 +6,47 @@ from pathlib import Path
 from datetime import datetime
 
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+
 from pydeseq2.dds import DeseqDataSet
 from pydeseq2.ds import DeseqStats
 
-
-from rnaseq_native.paths import project_root
 from rnaseq_native.io import load_samples_tsv
 from rnaseq_native.counts import load_count_matrix, align_counts_and_samples
+
+
+def export_gsea_ranked(res_df: pd.DataFrame, exports_dir: Path) -> None:
+    exports_dir.mkdir(parents=True, exist_ok=True)
+
+    df = res_df.copy()
+    df = df.reset_index().rename(columns={"index": "gene"})
+
+    # Prefer DESeq2 Wald statistic if present; otherwise compute a fallback.
+    if "stat" in df.columns and df["stat"].notna().any():
+        df["rank_metric"] = df["stat"]
+    else:
+        # fallback: signed -log10(pvalue) * sign(log2FC)
+        p = df["pvalue"].astype(float)
+        lfc = df["log2FoldChange"].astype(float)
+        df["rank_metric"] = np.sign(lfc) * (-np.log10(p.clip(lower=1e-300)))
+
+    df = df.dropna(subset=["rank_metric", "gene"]).copy()
+    df = df.sort_values("rank_metric", ascending=False)
+
+    tsv_path = exports_dir / "gsea_ranked_genes.tsv"
+    df[["gene", "rank_metric", "log2FoldChange", "pvalue", "padj"]].to_csv(
+        tsv_path, sep="\t", index=False
+    )
+
+    # RNK for Broad GSEA: 2 columns, no header
+    rnk_path = exports_dir / "gsea_ranked_genes.rnk"
+    df[["gene", "rank_metric"]].to_csv(
+        rnk_path, sep="\t", index=False, header=False)
+
+    print(f"Wrote: {tsv_path}")
+    print(f"Wrote: {rnk_path}")
 
 
 def main(argv: list[str]) -> int:
@@ -79,10 +113,14 @@ def main(argv: list[str]) -> int:
     print("DESeq2 finished")
 
     print("Computing DE statistics...")
-    contrast = plan["design"]["contrast"] # e.g. ["condition", "Protzen", "Control"]
+
     stat_res = DeseqStats(dds, contrast=contrast)
     stat_res.summary()
     res_df = stat_res.results_df
+
+    exports_dir = Path(plan["outputs"].get(
+        "exports_dir", str(analysis_dir.parent / "exports")))
+    export_gsea_ranked(res_df, exports_dir)
 
     # ---- summary report(quick sanity + insigt) ----
     n_total = int(res_df.shape[0])
