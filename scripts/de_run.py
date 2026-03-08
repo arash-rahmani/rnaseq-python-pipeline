@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from re import A
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -21,7 +22,13 @@ def export_gsea_ranked(res_df: pd.DataFrame, exports_dir: Path) -> None:
     exports_dir.mkdir(parents=True, exist_ok=True)
 
     df = res_df.copy()
-    df = df.reset_index().rename(columns={"index": "gene"})
+    df = df.reset_index()
+    if "index" in df.columns:
+        df = df.rename(columns={"index": "gene"})
+    elif "Geneid" in df.columns:
+        df = df.rename(columns={"Geneid": "gene"})
+    else:
+        df = df.rename(columns={df.columns[0]: "gene"})
 
     # Prefer DESeq2 Wald statistic if present; otherwise compute a fallback.
     if "stat" in df.columns and df["stat"].notna().any():
@@ -47,6 +54,89 @@ def export_gsea_ranked(res_df: pd.DataFrame, exports_dir: Path) -> None:
 
     print(f"Wrote: {tsv_path}")
     print(f"Wrote: {rnk_path}")
+
+
+def plot_volcano(res_df: pd.DataFrame, outpath: Path, alpha: float = 0.05) -> None:
+    df = res_df.copy()
+    df = df.dropna(subset=["log2FoldChange", "pvalue"]).copy()
+
+    x = df["log2FoldChange"].astype(float)
+    y = -np.log10(df["pvalue"].astype(float).clip(lower=1e-300))
+
+    plt.figure()
+    plt.scatter(x, y, s=8, alpha=0.6)
+    plt.axhline(-np.log10(alpha), linestyle="--")
+    plt.xlabel("log2FoldChange")
+    plt.ylabel("-log10(pvalue)")
+    plt.title("Volcano plot")
+    outpath.parent.mkdir(parents=True, exist_ok=True)
+    plt.tight_layout()
+    plt.savefig(outpath, dpi=200)
+    plt.close()
+    print(f"Wrote: {outpath}")
+
+
+def plot_ma(res_df: pd.DataFrame, outpath: Path) -> None:
+    df = res_df.copy()
+    # DESeq2 results usually have baseMean; if missing, we skip MA.
+    if "baseMean" not in df.columns:
+        print("MA plot skipped: baseMean column not found.")
+        return
+
+    df = df.dropna(subset=["baseMean", "log2FoldChange"]).copy()
+    x = np.log10(df["baseMean"].astype(float) + 1.0)
+    y = df["log2FoldChange"].astype(float)
+
+    plt.figure()
+    plt.scatter(x, y, s=8, alpha=0.6)
+    plt.axhline(0.0, linestyle="--")
+    plt.xlabel("log10(baseMean + 1)")
+    plt.ylabel("log2FoldChange")
+    plt.title("MA plot")
+    outpath.parent.mkdir(parents=True, exist_ok=True)
+    plt.tight_layout()
+    plt.savefig(outpath, dpi=200)
+    plt.close()
+    print(f"Wrote: {outpath}")
+
+
+def get_normed_counts(dds, fallback_counts_t: pd.DataFrame) -> np.ndarray:
+    # Try common PyDESeq2 attributes first.
+    for attr in ["normed_counts", "normalized_counts"]:
+        if hasattr(dds, attr):
+            mat = getattr(dds, attr)
+            try:
+                return np.asarray(mat)
+            except Exception:
+                pass
+
+    # Last resort: use the counts matrix passed from main (samples x genes).
+    return np.asarray(fallback_counts_t)
+
+
+def plot_pca(dds, coldata: pd.DataFrame, fallback_counts_t: pd.DataFrame, outpath: Path) -> None:
+    X = get_normed_counts(dds, fallback_counts_t)  # samples x genes
+    X = np.log1p(X)
+
+    pca = PCA(n_components=2)
+    coords = pca.fit_transform(X)
+
+    plt.figure()
+    plt.scatter(coords[:, 0], coords[:, 1], s=40, alpha=0.8)
+
+    # Label points with sample names (index of coldata)
+    for i, name in enumerate(coldata.index.tolist()):
+        plt.text(coords[i, 0], coords[i, 1], name, fontsize=8)
+
+    plt.xlabel(f"PC1 ({pca.explained_variance_ratio_[0]*100:.1f}%)")
+    plt.ylabel(f"PC2 ({pca.explained_variance_ratio_[1]*100:.1f}%)")
+    plt.title("PCA (log1p normalized counts)")
+    outpath.parent.mkdir(parents=True, exist_ok=True)
+    plt.tight_layout()
+    plt.savefig(outpath, dpi=200)
+    plt.close()
+    print(f"Wrote: {outpath}")
+
 
 
 def main(argv: list[str]) -> int:
@@ -121,6 +211,10 @@ def main(argv: list[str]) -> int:
     exports_dir = Path(plan["outputs"].get(
         "exports_dir", str(analysis_dir.parent / "exports")))
     export_gsea_ranked(res_df, exports_dir)
+
+    plot_volcano(res_df, plots_dir / "volcano.png", alpha=alpha)
+    plot_ma(res_df, plots_dir / "ma.png")
+    plot_pca(dds, coldata, counts_only.T, plots_dir / "pca.png")
 
     # ---- summary report(quick sanity + insigt) ----
     n_total = int(res_df.shape[0])
