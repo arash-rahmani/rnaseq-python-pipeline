@@ -32,6 +32,38 @@ python -m venv .venv
 python -m pip install -U pip
 pip install -r requirement.txt
 
+## Data notes
+
+project data and annotation resources are documented in `data/README.md`.
+
+The repository uses an annotation-assisted mapping workflow to convert transcript-level STRG identifires into Arabidopsis TAIR loci for downstream enrichment analysis.
+
+Main annotation resource currently used:
+
+- `data/annotation/Final_Annotated_STRG_DESeq2_Expression_Merged_FIXED.csv`
+
+This file is used by:
+
+- `scripts/map_strg_to_tair.py`
+
+It supports the merge:
+
+- `Geneid` <-> `STRG_key`
+
+and extracts Arabidopsis identifires from:
+
+- `Arabidopsis_ID`
+
+Outputs generated from this mapping step include:
+
+- `results/exports/gsea_ranked_genes_TAIR.tsv`
+- `results/exports/gsea_ranked_genes_TAIR.rnk`
+- `results/exports/gsea_unmapped_STRG.tsv`
+- `results/exports/strg_to_tair_mapping_used.tsv`
+
+Note: some STRG IDs map to multiple TAIR canditates in the annotation table. In the current pipeline version, the first mapping per STRG is retained for reproducible downstream GSEA preparation.
+
+
 
 
 

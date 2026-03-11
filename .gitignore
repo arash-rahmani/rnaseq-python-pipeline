@@ -7,11 +7,12 @@ __pycache__/
 data/raw/
 results/
 config/samples.tsv
+
 *.egg-info/
 build/
 dist/
 .pytest_cache/
 notes/
+
 gene_count_matrix.csv
 out.txt
-results/
