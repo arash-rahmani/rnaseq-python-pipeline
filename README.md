@@ -65,7 +65,7 @@ Note: some STRG IDs map to multiple TAIR canditates in the annotation table. In 
 
 ## Functional enrichment(GSEA)
 
-Gene Set Enrichment Analysis (GSEA) is performed on preranked genes using the `gseapy` Python package.
+ Preranked Gene Set Enrichment Analysis (GSEA) is performed using the `gseapy` Python package.
 
 Workflow steps:
 
@@ -80,6 +80,9 @@ Scripts used:
 - scripts/map_strg_to_tair.py
 - scripts/fix_go_gmt.py
 - scripts/run_gsea.py
+
+The `fix_go_gmt.py` script converts GO annotation tables into a valid GMT gene set format by aggregating genes belonging to the same GO term.
+
 
 Outputs are written to:
 
