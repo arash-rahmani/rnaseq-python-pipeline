@@ -63,7 +63,29 @@ Outputs generated from this mapping step include:
 
 Note: some STRG IDs map to multiple TAIR canditates in the annotation table. In the current pipeline version, the first mapping per STRG is retained for reproducible downstream GSEA preparation.
 
+## Functional enrichment(GSEA)
 
+Gene Set Enrichment Analysis (GSEA) is performed on preranked genes using the `gseapy` Python package.
+
+Workflow steps:
+
+1. Differential expression analysis using PyDESeq2.
+2. Ranking genes based on signed statistical scores.
+3. Mapping transcript IDs (STRG) to Arabidopsis TAIR identifiers.
+4. Converting GO annotations into a valid GMT gene set file.
+5. Running preranked GSEA.
+
+Scripts used:
+
+- scripts/map_strg_to_tair.py
+- scripts/fix_go_gmt.py
+- scripts/run_gsea.py
+
+Outputs are written to:
+
+results/gsea/go_bp/
+
+These include enrichment tables and pathway plots for GO biological process terms.
 
 
 
