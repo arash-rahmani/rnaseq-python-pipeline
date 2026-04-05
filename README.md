@@ -1,94 +1,126 @@
 # rnaseq-python-pipeline
 
-Reproducible RNA-seq analysis workflow in Python (counts-first DE now; QC hooks ready), built with a clean `src/` layout and tested with `pytest`.
+> Reproducible RNA-seq analysis in Python — from raw counts to
+> differential expression and pathway enrichment.
 
-## What's included (so far)
-- Sample sheet loader + validation : `load_samples_tsv()` (`src/rnaseq_native/io.py`)
- - required columns (FASTQ mode): `sample, tree, condition,r1, r2`
- - Counts-first mode: requires only `sample, tree, condition`
- - Strips whitespace
- - Rejects empty/duplicate sample names
- - Validates allowed conditions: Control / Protzen
- - Optional `strict_path=True` checks FASTQ file exsistence
-- Count matrix loader + validation + alignment (`src/rnaseq_native/counts.py`)
-- DE plan + DE run via PyDESeq2 (`scripts/de_dry_run.py`, `scripts/de_run.py`)
-- Unit tests (`tests/`)
-- Test import setup (`tests/conftest.py` adds `<project_root>/src` to `sys.path`)
+**Language:** Python 3.x &nbsp;|&nbsp;
+**DE Engine:** PyDESeq2 &nbsp;|&nbsp;
+**Enrichment:** gseapy (GSEA preranked) &nbsp;|&nbsp;
+**Tests:** pytest
 
-## Project layout
-- `src/` : pipeline source code (Python package)
-- `config/`: configuration files (e.g. `config.yaml`, `samples.tsv`)
-- `scripts`: runnable entry scripts
-- `tests/`: automated tests (pytest)
-- `data/`: local input data (not committed)
-- `results/`: generated outputs (not committed)
+---
 
-```md
-## Setup (Windows/Powershell)
+## What this pipeline does
+
+Most RNA-seq analyses live in fragile notebooks or R scripts
+that break when someone else runs them on different data.
+
+This pipeline is different. It is:
+
+- **Config-driven** — swap datasets by editing a YAML file, not the code
+- **Tested** — pytest coverage across sample loading, validation, and DE logic
+- **Structured as a real Python package** — clean `src/` layout,
+  importable modules, dependency-pinned via `pyproject.toml`
+- **End-to-end** — from raw count matrix to enrichment plots
+  in a single reproducible workflow
+
+---
+
+## Pipeline overview
+```
+Raw Counts (TSV)
+      │
+      ▼
+ Sample Validation ──► rejects invalid/duplicate samples
+      │
+      ▼
+ Differential Expression (PyDESeq2)
+      │
+      ▼
+ Gene Ranking (signed log-fold change scores)
+      │
+      ▼
+ ID Mapping  STRG → TAIR (Arabidopsis)
+      │
+      ▼
+ GSEA Preranked (gseapy) against GO Biological Process gene sets
+      │
+      ▼
+ Results: enrichment tables + pathway plots
+```
+
+---
+
+## Repository structure
+```
+src/              # Python package (pipeline logic)
+config/           # YAML config + sample sheet (samples.tsv)
+scripts/          # Runnable entry points (de_run.py, run_gsea.py, ...)
+tests/            # pytest test suite
+data/             # Input data (not committed)
+results/          # Generated outputs (not committed)
+```
+
+---
+
+## Quick start
+
+**Requirements:** Python 3.10+, Windows (PowerShell) or Linux
 ```powershell
-cd F:\python_thesis
+# Clone and set up environment
+git clone https://github.com/arash-rahmani/rnaseq-python-pipeline
+cd rnaseq-python-pipeline
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -U pip
-pip install -r requirement.txt
+pip install -U pip
+pip install -r requirements.txt
+```
 
-## Data notes
+**Run differential expression:**
+```powershell
+python scripts/de_run.py
+```
 
-project data and annotation resources are documented in `data/README.md`.
+**Run GSEA enrichment:**
+```powershell
+python scripts/run_gsea.py
+```
 
-The repository uses an annotation-assisted mapping workflow to convert transcript-level STRG identifires into Arabidopsis TAIR loci for downstream enrichment analysis.
+**Run tests:**
+```powershell
+pytest tests/
+```
 
-Main annotation resource currently used:
+---
 
-- `data/annotation/Final_Annotated_STRG_DESeq2_Expression_Merged_FIXED.csv`
+## Key design decisions
 
-This file is used by:
+**Why PyDESeq2 instead of R/DESeq2?**
+Full Python stack — no R dependency, easier to integrate into
+automated pipelines, reproducible across environments.
 
-- `scripts/map_strg_to_tair.py`
+**Why config-driven execution?**
+Separating data config from code logic means the pipeline
+runs on new datasets without touching source files.
 
-It supports the merge:
+**Why pytest on a research pipeline?**
+Academic code breaks silently. Tests catch invalid sample sheets,
+mismatched column names, and edge cases before they corrupt results.
 
-- `Geneid` <-> `STRG_key`
+---
 
-and extracts Arabidopsis identifires from:
+## Biological context
 
-- `Arabidopsis_ID`
+This pipeline was developed and validated on transcriptome data
+from *Fagus sylvatica* (European beech), analysing carbon-harvesting
+responses via RNA-seq. The GSEA step uses GO Biological Process
+gene sets to identify enriched pathways from ranked differential
+expression results.
 
-Outputs generated from this mapping step include:
+---
 
-- `results/exports/gsea_ranked_genes_TAIR.tsv`
-- `results/exports/gsea_ranked_genes_TAIR.rnk`
-- `results/exports/gsea_unmapped_STRG.tsv`
-- `results/exports/strg_to_tair_mapping_used.tsv`
+## About
 
-Note: some STRG IDs map to multiple TAIR canditates in the annotation table. In the current pipeline version, the first mapping per STRG is retained for reproducible downstream GSEA preparation.
-
-## Functional enrichment(GSEA)
-
- Preranked Gene Set Enrichment Analysis (GSEA) is performed using the `gseapy` Python package.
-
-Workflow steps:
-
-1. Differential expression analysis using PyDESeq2.
-2. Ranking genes based on signed statistical scores.
-3. Mapping transcript IDs (STRG) to Arabidopsis TAIR identifiers.
-4. Converting GO annotations into a valid GMT gene set file.
-5. Running preranked GSEA.
-
-Scripts used:
-
-- scripts/map_strg_to_tair.py
-- scripts/fix_go_gmt.py
-- scripts/run_gsea.py
-
-The `fix_go_gmt.py` script converts GO annotation tables into a valid GMT gene set format by aggregating genes belonging to the same GO term.
-
-
-Outputs are written to:
-
-results/gsea/go_bp/
-
-These include enrichment tables and pathway plots for GO biological process terms.
-
-
-
+Built by [Arash Rahmani](https://github.com/arash-rahmani) —
+M.Sc. Bioinformatics, Julius-Maximilians-Universität Würzburg.
+[LinkedIn](https://linkedin.com/in/arash-rahmani-544684242)
