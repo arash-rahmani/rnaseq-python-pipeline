@@ -9,6 +9,39 @@
 **Tests:** pytest
 
 ---
+## Results preview
+
+The pipeline produces publication-ready plots and ranked gene tables
+directly from raw count input.
+
+**PCA — sample separation by condition (Control vs Protzen)**
+![PCA plot](docs/img/pca.png)
+
+> PC1 (41.1%) cleanly separates the two conditions across biological
+> replicates, confirming consistent transcriptomic response.
+
+**Volcano plot — differential expression landscape**
+![Volcano plot](docs/img/volcano.png)
+
+> Genes above the significance threshold (dashed line, p < 0.05)
+> and with |log2FC| > 2 are candidates for downstream pathway analysis.
+
+**Top 10 differentially expressed genes (by |log2FC|)**
+
+| Gene ID | baseMean | log2FC | padj |
+|---|---|---|---|
+| STRG.32921 | 22.7 | 5.53 | 0.028 |
+| STRG.31388 | 10.8 | 5.31 | 0.034 |
+| STRG.31523 | 9.04 | 4.85 | 0.051 |
+| STRG.32898 | 7.24 | 4.67 | 0.060 |
+| STRG.28791 | 16.2 | 4.67 | 0.022 |
+| STRG.33050 | 6.91 | 4.56 | 0.070 |
+| STRG.31864 | 10.1 | 4.44 | 0.073 |
+| STRG.33346 | 5.30 | 4.40 | 0.080 |
+| STRG.32218 | 5.50 | 4.40 | 0.080 |
+| STRG.32461 | 7.51 | 4.40 | 0.076 |
+
+---
 
 ## What this pipeline does
 
